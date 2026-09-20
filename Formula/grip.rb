@@ -2,7 +2,7 @@ class Grip < Formula
   desc "See which processes are using your files"
   homepage "https://github.com/karimz1/grip"
   license "MIT"
-  head "git@github.com:karimz1/grip.git", branch: "main", using: :git
+  head "https://github.com/karimz1/grip.git", branch: "main", using: :git
 
   depends_on "go" => :build
   conflicts_with "homebrew/core/grip", because: "both install a grip executable"
