@@ -1,0 +1,16 @@
+name: Formula checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check formula syntax
+        run: ruby -c Formula/grip.rb
+      - name: Check release verifier syntax
+        run: python3 -m py_compile scripts/verify_release.py
