@@ -1,29 +1,29 @@
 class Grip < Formula
   desc "See which processes are using your files"
   homepage "https://github.com/karimz1/grip"
-  version "0.0.2"
+  version "0.0.4"
   license "MIT"
   conflicts_with "homebrew/core/grip", because: "both install a grip executable"
 
   on_macos do
     on_arm do
-      url "https://github.com/karimz1/grip/releases/download/v0.0.2/grip_v0.0.2_darwin_arm64.tar.gz"
-      sha256 "866a5cd8e881696f0ed148157ab8ecaf6ea9afbaae3c27f37504f5c2a4e28900"
+      url "https://github.com/karimz1/grip/releases/download/v0.0.4/grip_v0.0.4_darwin_arm64.tar.gz"
+      sha256 "cebb7a2fc08242e7bfe0ce713915a235ce8149d65fa3d7484f5ad8e7d17f0ca0"
     end
     on_intel do
-      url "https://github.com/karimz1/grip/releases/download/v0.0.2/grip_v0.0.2_darwin_amd64.tar.gz"
-      sha256 "04b3ae5e848614b2cf5f25f59145021e0f5f10a28316cb0e128af3f0d5630e07"
+      url "https://github.com/karimz1/grip/releases/download/v0.0.4/grip_v0.0.4_darwin_amd64.tar.gz"
+      sha256 "04267a82b1795bdb0f813a5eb58ad549bd10b3237d870810e1630df17953c0be"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/karimz1/grip/releases/download/v0.0.2/grip_v0.0.2_linux_arm64.tar.gz"
-      sha256 "4ec3490109b0968f34fccf8f4045cdeeafa8ae58a35a56fd587773ba5dea58f5"
+      url "https://github.com/karimz1/grip/releases/download/v0.0.4/grip_v0.0.4_linux_arm64.tar.gz"
+      sha256 "b2447fa91d2838571e742c3aa655023b9131a9230aa89ce34d73d9835d30939e"
     end
     on_intel do
-      url "https://github.com/karimz1/grip/releases/download/v0.0.2/grip_v0.0.2_linux_amd64.tar.gz"
-      sha256 "dc840a003d216d79af254167965b0903f5a1d87ae26c5c094138e9d715095cab"
+      url "https://github.com/karimz1/grip/releases/download/v0.0.4/grip_v0.0.4_linux_amd64.tar.gz"
+      sha256 "ba59dba8a7ec0848156ebe88e3eff8ddd9e64057b04dfbb964bcf50f1f6ccb41"
     end
   end
 
