@@ -1,0 +1,69 @@
+name: Update oflh
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 7 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: update-oflh
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Find the latest stable published release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/karimz1/open-file-lock-handle/releases/latest > "$RUNNER_TEMP/oflh-release.json"
+          python3 - <<'PY'
+          import json, os, re
+          with open(os.environ['RUNNER_TEMP']+'/oflh-release.json') as f:
+              release=json.load(f)
+          tag=release['tag_name']
+          assets={a['name'] for a in release['assets']}
+          if not release['draft'] and not release['prerelease'] and re.fullmatch(r'v\d+\.\d+\.\d+',tag):
+              if 'oflh-linux-amd64' in assets:
+                  with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+                      f.write('tag='+tag+'\n')
+              else:
+                  with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+                      f.write('Waiting for the first oflh release; legacy grip remains available.\n')
+          PY
+      - name: Download and verify executable assets
+        if: steps.release.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          gh release download "$TAG" --repo karimz1/open-file-lock-handle --dir "$RUNNER_TEMP/oflh-release" --pattern checksums.txt --pattern 'oflh-linux-*' --pattern 'oflh-darwin-*'
+          python3 scripts/verify_release.py "$RUNNER_TEMP/oflh-release" "$TAG"
+          ruby -c "$RUNNER_TEMP/oflh-release/oflh.rb"
+          cp "$RUNNER_TEMP/oflh-release/oflh.rb" Formula/oflh.rb
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('formula_renames.json')
+          renames = json.loads(p.read_text()) if p.exists() else {}
+          renames['grip'] = 'oflh'
+          p.write_text(json.dumps(renames, indent=2) + '\n')
+          Path('Formula/grip.rb').unlink(missing_ok=True)
+          PY
+      - name: Commit verified formula and migration
+        if: steps.release.outputs.tag != ''
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git add Formula/oflh.rb formula_renames.json
+          git add -u Formula/
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "oflh: update to $TAG"
+          git push origin HEAD:main

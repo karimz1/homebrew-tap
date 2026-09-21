@@ -11,6 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Check formula syntax
-        run: ruby -c Formula/grip.rb
+        run: for formula in Formula/*.rb; do ruby -c "$formula"; done
       - name: Check release verifier syntax
-        run: python3 -m py_compile scripts/verify_release.py
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
