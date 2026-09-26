@@ -1,28 +1,28 @@
 class Oflh < Formula
   desc "Find processes using files, directories, and open handles"
   homepage "https://github.com/karimz1/open-file-lock-handle"
-  version "0.0.9"
+  version "0.1.0"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/karimz1/open-file-lock-handle/releases/download/v0.0.9/oflh-darwin-arm64"
-      sha256 "58088e1bb4ef95b3d63c7736c487e7272ab688d9fa18e7ebc77c8617e14e9a2d"
+      url "https://github.com/karimz1/open-file-lock-handle/releases/download/v0.1.0/oflh-darwin-arm64"
+      sha256 "24148e09c3337109a9b8d66ba7bbf52b0158b6f2d9880bd803063ebaaec5cdd5"
     end
     on_intel do
-      url "https://github.com/karimz1/open-file-lock-handle/releases/download/v0.0.9/oflh-darwin-amd64"
-      sha256 "d0d24da0210b1f059898ba12ec8e02b857a305831d89b3df5d6bcd0c6319bbb2"
+      url "https://github.com/karimz1/open-file-lock-handle/releases/download/v0.1.0/oflh-darwin-amd64"
+      sha256 "22360c1ce394702e25b87a7f821a23c8f13567f6146fdd5776cd8241cf0d44ee"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/karimz1/open-file-lock-handle/releases/download/v0.0.9/oflh-linux-arm64"
-      sha256 "dba6b7077c6e33afd3d2d4266c11fd2faaeacd6263ff86d6ee8d898912c662b1"
+      url "https://github.com/karimz1/open-file-lock-handle/releases/download/v0.1.0/oflh-linux-arm64"
+      sha256 "8fd199921fbeb1575e882d02badaffc5f9eca63029044649996c51aa844f01fe"
     end
     on_intel do
-      url "https://github.com/karimz1/open-file-lock-handle/releases/download/v0.0.9/oflh-linux-amd64"
-      sha256 "4b3b7faee00a292b5099efa0a232beb3515c65544ca7c569fe5d053adc40df67"
+      url "https://github.com/karimz1/open-file-lock-handle/releases/download/v0.1.0/oflh-linux-amd64"
+      sha256 "78b8d72caddaa4b031ba56dd80cb7ca126af5e126a46747de07bd966fb3b4d39"
     end
   end
 
