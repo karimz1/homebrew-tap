@@ -14,9 +14,11 @@ def version(value):
     return value
 
 
-def binary_name(system, arch):
+def binary_name(system, arch, modern=False):
     if (system, arch) not in TARGETS:
         raise ValueError("unsupported target")
+    if modern:
+        return f"oflh-cli.{system}.{arch}" + (".exe" if system == "windows" else "")
     return f"oflh-{system}-{arch}" + (".exe" if system == "windows" else "")
 
 
@@ -39,22 +41,52 @@ def formula(tag, checksums, repository="karimz1/open-file-lock-handle"):
         raise ValueError("Homebrew requires a tagged release")
     if not re.fullmatch(r"[\w.-]+/[\w.-]+", repository):
         raise ValueError("invalid GitHub repository")
-    result = ['class Oflh < Formula', '  desc "Find processes using files, directories, and open handles"',
+    modern = "oflh-cli.linux.amd64" in checksums
+    result = ['class OflhCli < Formula', '  desc "Find processes using files, directories, and open handles"',
               f'  homepage "https://github.com/{repository}"', f'  version "{tag[1:]}"',
               '  license "MIT"', '']
     for system, block in [("darwin", "macos"), ("linux", "linux")]:
         result.append(f"  on_{block} do")
         for arch, brewarch in [("arm64", "arm"), ("amd64", "intel")]:
-            name = binary_name(system, arch)
+            name = binary_name(system, arch, modern=modern)
             digest = checksums[name]
             if not re.fullmatch(r"[0-9a-f]{64}", digest):
                 raise ValueError("invalid SHA-256 digest")
             result += [f"    on_{brewarch} do", f'      url "https://github.com/{repository}/releases/download/{tag}/{name}"',
                        f'      sha256 "{digest}"', '    end']
         result += ['  end', '']
-    result += ['  def install', '    bin.install Dir["oflh-*"][0] => "oflh"', '  end', '', '  test do',
+    executable_glob = "oflh-cli.*" if modern else "oflh-*"
+    result += ['  def install', f'    bin.install Dir["{executable_glob}"][0] => "oflh"', '  end', '', '  test do',
                '    assert_match "oflh #{version}", shell_output("#{bin}/oflh --version")', '  end', 'end', '']
     return "\n".join(result)
+
+
+def cask(tag, checksums, repository="karimz1/open-file-lock-handle"):
+    """Generate the macOS Desktop cask from verified release DMG hashes."""
+    version(tag)
+    if tag == "dev" or not re.fullmatch(r"[\w.-]+/[\w.-]+", repository):
+        raise ValueError("Cask requires a tagged release and valid repository")
+    arm = checksums["oflh-desktop.darwin.arm64.dmg"]
+    intel = checksums["oflh-desktop.darwin.amd64.dmg"]
+    if not all(re.fullmatch(r"[0-9a-f]{64}", digest) for digest in [arm, intel]):
+        raise ValueError("invalid SHA-256 digest")
+    return f'''cask "oflh-desktop" do
+  arch arm: "arm64", intel: "amd64"
+
+  version "{tag[1:]}"
+  sha256 arm:   "{arm}",
+         intel: "{intel}"
+
+  url "https://github.com/{repository}/releases/download/v#{{version}}/oflh-desktop.darwin.#{{arch}}.dmg"
+  name "OFLH Desktop"
+  desc "Find processes using files, folders, and local ports"
+  homepage "https://github.com/{repository}"
+
+  depends_on :macos
+
+  app "OFLH Desktop.app"
+end
+'''
 
 
 def assemble(output, tag):

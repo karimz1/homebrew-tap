@@ -9,8 +9,13 @@ jobs:
   syntax:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - name: Check formula syntax
-        run: for formula in Formula/*.rb; do ruby -c "$formula"; done
+      - uses: actions/checkout@v7
+      - name: Check formula and Cask syntax
+        run: |
+          for formula in Formula/*.rb Casks/*.rb; do
+            if [ -f "$formula" ]; then ruby -c "$formula"; fi
+          done
+          test -L Aliases/oflh
+          test "$(readlink Aliases/oflh)" = ../Formula/oflh-cli.rb
       - name: Check release verifier syntax
         run: python3 -m unittest discover -s scripts -p 'test_*.py'

@@ -27,6 +27,14 @@ class ReleaseTests(unittest.TestCase):
                     self.assertIn(digest, generated)
             self.assertEqual(generated.count('sha256 "'), 4)
             self.assertIn('=> "oflh"', generated)
+            self.assertIn('class OflhCli < Formula', generated)
+            self.assertIn('Dir["oflh-*"]', generated)
+            modern_checksums = {
+                binary_name(system, arch, modern=True): "a" * 64
+                for system, arch in TARGETS
+            }
+            modern_formula = formula("v0.1.0", modern_checksums)
+            self.assertIn('Dir["oflh-cli.*"]', modern_formula)
             (output / "old.zip").write_bytes(b"stale")
             with self.assertRaisesRegex(ValueError, "unexpected"):
                 assemble(output, "v0.1.0")
