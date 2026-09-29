@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   update:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    runs-on: macos-15
+    timeout-minutes: 20
     permissions:
       contents: write
     steps:
@@ -73,6 +73,28 @@ jobs:
             mkdir -p Casks
             cp "$RUNNER_TEMP/oflh-release/$CASK" "Casks/$CASK"
           fi
+      - name: Install and smoke-test the Desktop Cask
+        if: steps.release.outputs.tag != ''
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
+        run: |
+          SUFFIX=''
+          if [ "$PRERELEASE" = true ]; then SUFFIX='-rc'; fi
+          CASK="oflh-desktop${SUFFIX}.rb"
+          CASK_SOURCE="$RUNNER_TEMP/oflh-release/$CASK"
+          if [ ! -f "$CASK_SOURCE" ]; then
+            echo 'No Desktop Cask is present in this release; skipping.'
+            exit 0
+          fi
+          if git show "HEAD:Casks/$CASK" > "$RUNNER_TEMP/current-cask.rb" 2>/dev/null && cmp -s "$CASK_SOURCE" "$RUNNER_TEMP/current-cask.rb"; then
+            echo 'The published Desktop Cask is unchanged; skipping reinstall.'
+            exit 0
+          fi
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask --no-quarantine --appdir="$RUNNER_TEMP/Applications" "$CASK_SOURCE"
+          APP="$RUNNER_TEMP/Applications/OFLH Desktop.app/Contents/MacOS/oflh-desktop"
+          test -x "$APP"
+          test "$("$APP" --version | head -n 1)" = "oflh-desktop ${TAG#v}"
       - name: Commit verified formula and Desktop cask
         if: steps.release.outputs.tag != ''
         env:
