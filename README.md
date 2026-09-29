@@ -15,13 +15,22 @@ brew install karimz1/tap/oflh-cli
 After `brew update`, `brew upgrade` migrates an existing `oflh` installation to
 the canonical `oflh-cli` formula.
 
+For a published prerelease, install the separate RC formula:
+
+```sh
+brew install karimz1/tap/oflh-cli-rc
+```
+
+The stable and RC formulae both provide `oflh`. Do not install both at the same
+time.
+
 MIT licensed.
 
 ## OFLH Desktop
 
-The tap updater adds an **oflh-desktop** Cask after a stable release with both
-macOS DMGs is published. Before updating, it verifies every release download
-against the shared `checksums.txt`.
+The tap updater publishes **oflh-desktop** from stable releases and
+**oflh-desktop-rc** from published prereleases. It verifies every download
+against the release's shared `checksums.txt` before updating either Cask.
 
 Once available:
 
@@ -29,7 +38,16 @@ Once available:
 brew install --cask karimz1/tap/oflh-desktop
 ```
 
+Published prereleases use a separate Cask:
+
+```sh
+brew install --cask karimz1/tap/oflh-desktop-rc
+```
+
+The stable and RC Casks install the same application and cannot be installed
+side by side.
+
 Windows and Linux Desktop users can download the EXE, DEB, or RPM installer from
 the [OFLH release page](https://github.com/karimz1/open-file-lock-handle/releases).
-Homebrew Cask is available on macOS. The automatic tap updater follows stable
-releases only.
+Homebrew Cask is available on macOS. Release events update the matching stable
+or RC entry. Scheduled updates continue to follow stable releases only.

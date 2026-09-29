@@ -1,6 +1,11 @@
 name: Update oflh
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Published stable or prerelease tag to install in the tap
+        required: false
+        type: string
   schedule:
     - cron: '23 7 * * *'
 permissions:
@@ -20,44 +25,66 @@ jobs:
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.tag || '' }}
         run: |
-          gh api repos/karimz1/open-file-lock-handle/releases/latest > "$RUNNER_TEMP/oflh-release.json"
+          if [ -n "$REQUESTED_TAG" ]; then
+            if [[ ! "$REQUESTED_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+              echo '::error::Tag must be a v-prefixed semantic version.'
+              exit 1
+            fi
+            gh api "repos/karimz1/open-file-lock-handle/releases/tags/$REQUESTED_TAG" > "$RUNNER_TEMP/oflh-release.json"
+          else
+            gh api repos/karimz1/open-file-lock-handle/releases/latest > "$RUNNER_TEMP/oflh-release.json"
+          fi
           python3 - <<'PY'
           import json, os, re
           with open(os.environ['RUNNER_TEMP']+'/oflh-release.json') as f:
               release=json.load(f)
           tag=release['tag_name']
           assets={a['name'] for a in release['assets']}
-          if not release['draft'] and not release['prerelease'] and re.fullmatch(r'v\d+\.\d+\.\d+',tag):
-              if 'oflh-linux-amd64' in assets or 'oflh-cli.linux.amd64' in assets:
+          supported_tag = re.fullmatch(r'v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?', tag)
+          requested = os.environ['REQUESTED_TAG']
+          if not release['draft'] and supported_tag and (not requested or tag == requested):
+              if 'oflh-cli.linux.amd64' in assets or 'oflh-linux-amd64' in assets:
                   with open(os.environ['GITHUB_OUTPUT'],'a') as f:
                       f.write('tag='+tag+'\n')
+                      f.write('prerelease='+str(release['prerelease']).lower()+'\n')
               else:
                   with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
-                      f.write('No compatible OFLH CLI assets found in the latest release.\n')
+                      f.write('No compatible OFLH CLI assets found in the selected release.\n')
           PY
       - name: Download and verify executable assets
         if: steps.release.outputs.tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
         run: |
+          SUFFIX=''
+          if [ "$PRERELEASE" = true ]; then SUFFIX='-rc'; fi
           gh release download "$TAG" --repo karimz1/open-file-lock-handle --dir "$RUNNER_TEMP/oflh-release" --pattern checksums.txt --pattern 'oflh-linux-*' --pattern 'oflh-darwin-*' --pattern 'oflh-windows-*' --pattern 'oflh-cli.*' --pattern 'oflh-desktop.*'
           python3 scripts/verify_release.py "$RUNNER_TEMP/oflh-release" "$TAG"
-          ruby -c "$RUNNER_TEMP/oflh-release/oflh-cli.rb"
-          cp "$RUNNER_TEMP/oflh-release/oflh-cli.rb" Formula/oflh-cli.rb
-          if [ -f "$RUNNER_TEMP/oflh-release/oflh-desktop.rb" ]; then
-            ruby -c "$RUNNER_TEMP/oflh-release/oflh-desktop.rb"
+          FORMULA="oflh-cli${SUFFIX}.rb"
+          CASK="oflh-desktop${SUFFIX}.rb"
+          ruby -c "$RUNNER_TEMP/oflh-release/$FORMULA"
+          cp "$RUNNER_TEMP/oflh-release/$FORMULA" "Formula/$FORMULA"
+          if [ -f "$RUNNER_TEMP/oflh-release/$CASK" ]; then
+            ruby -c "$RUNNER_TEMP/oflh-release/$CASK"
             mkdir -p Casks
-            cp "$RUNNER_TEMP/oflh-release/oflh-desktop.rb" Casks/oflh-desktop.rb
+            cp "$RUNNER_TEMP/oflh-release/$CASK" "Casks/$CASK"
           fi
       - name: Commit verified formula and Desktop cask
         if: steps.release.outputs.tag != ''
         env:
           TAG: ${{ steps.release.outputs.tag }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
         run: |
-          git add Formula/oflh-cli.rb formula_renames.json
-          if [ -f Casks/oflh-desktop.rb ]; then git add Casks/oflh-desktop.rb; fi
+          SUFFIX=''
+          if [ "$PRERELEASE" = true ]; then SUFFIX='-rc'; fi
+          FORMULA="Formula/oflh-cli${SUFFIX}.rb"
+          CASK="Casks/oflh-desktop${SUFFIX}.rb"
+          git add "$FORMULA" formula_renames.json
+          if [ -f "$CASK" ]; then git add "$CASK"; fi
           git add -u Formula/
           if [ -d Casks ]; then git add -u Casks/; fi
           if git diff --cached --quiet; then exit 0; fi

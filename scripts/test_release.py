@@ -40,6 +40,8 @@ class ReleaseTests(unittest.TestCase):
             }
             modern_formula = formula("v0.1.0", modern_checksums)
             self.assertIn('Dir["oflh-cli.*"]', modern_formula)
+            prerelease_formula = formula("v0.2.0-rc.1", modern_checksums)
+            self.assertIn("class OflhCliRc < Formula", prerelease_formula)
             (output / "old.zip").write_bytes(b"stale")
             with self.assertRaisesRegex(ValueError, "unexpected"):
                 assemble(output, "v0.1.0")

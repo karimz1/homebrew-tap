@@ -3,12 +3,47 @@ import hashlib
 from pathlib import Path
 import re
 import sys
-from release import TARGETS, binary_name, formula, cask
+from release import TARGETS, binary_name, formula, cask, is_prerelease
+
+
+def version_parts(value):
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?", value)
+    if not match:
+        return None
+    core = tuple(int(part) for part in match.group(1, 2, 3))
+    prerelease = match.group(4)
+    return core, prerelease.split(".") if prerelease else None
+
+
+def is_downgrade(current, target):
+    current_parts = version_parts(current)
+    target_parts = version_parts(target)
+    if not current_parts or not target_parts:
+        return False
+    current_core, current_pre = current_parts
+    target_core, target_pre = target_parts
+    if current_core != target_core:
+        return current_core > target_core
+    if current_pre is None:
+        return target_pre is not None
+    if target_pre is None:
+        return False
+    for current_id, target_id in zip(current_pre, target_pre):
+        if current_id == target_id:
+            continue
+        current_numeric = current_id.isdigit()
+        target_numeric = target_id.isdigit()
+        if current_numeric and target_numeric:
+            return int(current_id) > int(target_id)
+        if current_numeric != target_numeric:
+            return not current_numeric
+        return current_id > target_id
+    return len(current_pre) > len(target_pre)
 
 
 def verify(root, tag, current):
-    if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
-        raise ValueError("Only stable semantic versions can update the tap")
+    if not re.fullmatch(r"v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", tag):
+        raise ValueError("Only semantic-version releases can update the tap")
     sums = {}
     for line in (root / "checksums.txt").read_text().splitlines():
         digest, name = line.split("  ", 1)
@@ -27,23 +62,24 @@ def verify(root, tag, current):
         artifact = root / name
         if not artifact.is_file() or hashlib.sha256(artifact.read_bytes()).hexdigest() != expected_digest:
             raise ValueError(f"Checksum mismatch: {name}")
-    old = re.search(r'^  version "(\d+\.\d+\.\d+)"', current, re.M)
-    if old and tuple(map(int, old[1].split('.'))) > tuple(map(int, tag[1:].split('.'))):
+    old = re.search(r'^  version "([0-9A-Za-z.-]+)"', current, re.M)
+    if old and is_downgrade(old[1], tag[1:]):
         raise ValueError("Refusing to downgrade the formula")
-    return formula(tag, sums)
+    return formula(tag, sums, prerelease=is_prerelease(tag))
 
 
 if __name__ == '__main__':
     root, tag = Path(sys.argv[1]), sys.argv[2]
-    current = Path('Formula/oflh-cli.rb')
-    if not current.exists():
+    suffix = "-rc" if is_prerelease(tag) else ""
+    current = Path(f'Formula/oflh-cli{suffix}.rb')
+    if not current.exists() and not is_prerelease(tag):
         current = Path('Formula/oflh.rb')
-    generated = verify(root, tag, current.read_text())
-    (root / 'oflh-cli.rb').write_text(generated)
+    generated = verify(root, tag, current.read_text() if current.exists() else "")
+    (root / f'oflh-cli{suffix}.rb').write_text(generated)
     checksum_entries = dict(
         (name, digest) for digest, name in
         (line.split("  ", 1) for line in (root / "checksums.txt").read_text().splitlines())
     )
     if "oflh-desktop.darwin.arm64.dmg" in checksum_entries:
-        (root / "oflh-desktop.rb").write_text(cask(tag, checksum_entries))
+        (root / f'oflh-desktop{suffix}.rb').write_text(cask(tag, checksum_entries))
     print(f"Verified {tag}; generated formula and any available Desktop cask")
