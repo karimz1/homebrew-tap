@@ -12,6 +12,8 @@ brew install karimz1/tap/oflh-cli
 ```
 
 `karimz1/tap/oflh` remains available as a compatibility alias.
+After `brew update`, `brew upgrade` migrates an existing `oflh` installation to
+the canonical `oflh-cli` formula.
 
 MIT licensed.
 

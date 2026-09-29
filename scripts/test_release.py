@@ -1,3 +1,4 @@
+import json
 import hashlib
 from pathlib import Path
 import tempfile
@@ -6,6 +7,10 @@ from release import TARGETS, assemble, binary_name, formula, package, version
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_legacy_formula_name_migrates_to_cli(self):
+        manifest = Path(__file__).resolve().parents[1] / "formula_renames.json"
+        self.assertEqual(json.loads(manifest.read_text()), {"oflh": "oflh-cli"})
+
     def test_six_executables_and_formula(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
