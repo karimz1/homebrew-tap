@@ -91,8 +91,15 @@ jobs:
             echo 'The published Desktop Cask is unchanged; skipping reinstall.'
             exit 0
           fi
+          CI_TAP="karimz1/oflh-ci-${GITHUB_RUN_ID}"
+          CASK_TOKEN="${CASK%.rb}"
+          brew tap-new --no-git "$CI_TAP"
+          CI_TAP_PATH="$(brew --repository "$CI_TAP")"
+          mkdir -p "$CI_TAP_PATH/Casks"
+          cp "$CASK_SOURCE" "$CI_TAP_PATH/Casks/$CASK"
+          brew trust --cask "$CI_TAP/$CASK_TOKEN"
           APP_BUNDLE="$RUNNER_TEMP/Applications/OFLH Desktop.app"
-          HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask --appdir="$RUNNER_TEMP/Applications" "$CASK_SOURCE"
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask --appdir="$RUNNER_TEMP/Applications" "$CI_TAP/$CASK_TOKEN"
           APP="$APP_BUNDLE/Contents/MacOS/oflh-desktop"
           test -x "$APP"
           xattr -dr com.apple.quarantine "$APP_BUNDLE" 2>/dev/null || true
