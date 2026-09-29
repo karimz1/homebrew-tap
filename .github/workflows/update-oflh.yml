@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Find the latest stable published release
         id: release
         env:
@@ -29,12 +29,12 @@ jobs:
           tag=release['tag_name']
           assets={a['name'] for a in release['assets']}
           if not release['draft'] and not release['prerelease'] and re.fullmatch(r'v\d+\.\d+\.\d+',tag):
-              if 'oflh-linux-amd64' in assets:
+              if 'oflh-linux-amd64' in assets or 'oflh-cli.linux.amd64' in assets:
                   with open(os.environ['GITHUB_OUTPUT'],'a') as f:
                       f.write('tag='+tag+'\n')
               else:
                   with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
-                      f.write('Waiting for the first oflh release; legacy grip remains available.\n')
+                      f.write('No compatible OFLH CLI assets found in the latest release.\n')
           PY
       - name: Download and verify executable assets
         if: steps.release.outputs.tag != ''
@@ -42,26 +42,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
         run: |
-          gh release download "$TAG" --repo karimz1/open-file-lock-handle --dir "$RUNNER_TEMP/oflh-release" --pattern checksums.txt --pattern 'oflh-linux-*' --pattern 'oflh-darwin-*'
+          gh release download "$TAG" --repo karimz1/open-file-lock-handle --dir "$RUNNER_TEMP/oflh-release" --pattern checksums.txt --pattern 'oflh-linux-*' --pattern 'oflh-darwin-*' --pattern 'oflh-windows-*' --pattern 'oflh-cli.*' --pattern 'oflh-desktop.*'
           python3 scripts/verify_release.py "$RUNNER_TEMP/oflh-release" "$TAG"
-          ruby -c "$RUNNER_TEMP/oflh-release/oflh.rb"
-          cp "$RUNNER_TEMP/oflh-release/oflh.rb" Formula/oflh.rb
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          p = Path('formula_renames.json')
-          renames = json.loads(p.read_text()) if p.exists() else {}
-          renames['grip'] = 'oflh'
-          p.write_text(json.dumps(renames, indent=2) + '\n')
-          Path('Formula/grip.rb').unlink(missing_ok=True)
-          PY
-      - name: Commit verified formula and migration
+          ruby -c "$RUNNER_TEMP/oflh-release/oflh-cli.rb"
+          cp "$RUNNER_TEMP/oflh-release/oflh-cli.rb" Formula/oflh-cli.rb
+          if [ -f "$RUNNER_TEMP/oflh-release/oflh-desktop.rb" ]; then
+            ruby -c "$RUNNER_TEMP/oflh-release/oflh-desktop.rb"
+            mkdir -p Casks
+            cp "$RUNNER_TEMP/oflh-release/oflh-desktop.rb" Casks/oflh-desktop.rb
+          fi
+      - name: Commit verified formula and Desktop cask
         if: steps.release.outputs.tag != ''
         env:
           TAG: ${{ steps.release.outputs.tag }}
         run: |
-          git add Formula/oflh.rb formula_renames.json
+          git add Formula/oflh-cli.rb
+          if [ -f Casks/oflh-desktop.rb ]; then git add Casks/oflh-desktop.rb; fi
           git add -u Formula/
+          if [ -d Casks ]; then git add -u Casks/; fi
           if git diff --cached --quiet; then exit 0; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

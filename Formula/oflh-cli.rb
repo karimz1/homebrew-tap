@@ -1,4 +1,4 @@
-class Oflh < Formula
+class OflhCli < Formula
   desc "Find processes using files, directories, and open handles"
   homepage "https://github.com/karimz1/open-file-lock-handle"
   version "0.1.1"
