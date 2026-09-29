@@ -91,9 +91,11 @@ jobs:
             echo 'The published Desktop Cask is unchanged; skipping reinstall.'
             exit 0
           fi
-          HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask --no-quarantine --appdir="$RUNNER_TEMP/Applications" "$CASK_SOURCE"
-          APP="$RUNNER_TEMP/Applications/OFLH Desktop.app/Contents/MacOS/oflh-desktop"
+          APP_BUNDLE="$RUNNER_TEMP/Applications/OFLH Desktop.app"
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask --appdir="$RUNNER_TEMP/Applications" "$CASK_SOURCE"
+          APP="$APP_BUNDLE/Contents/MacOS/oflh-desktop"
           test -x "$APP"
+          xattr -dr com.apple.quarantine "$APP_BUNDLE" 2>/dev/null || true
           test "$("$APP" --version | head -n 1)" = "oflh-desktop ${TAG#v}"
       - name: Commit verified formula and Desktop cask
         if: steps.release.outputs.tag != ''
